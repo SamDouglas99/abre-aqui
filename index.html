@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>Abre aqui</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: uma tela só — coração de "eu te amo" no canvas atrás, cenas trocando na frente */
+:root{
+  --bg:#07060a;
+  --ink:#f6eaec;
+  --muted:#a08d91;
+  --red:#ff2d48;
+  --red-deep:#b0102a;
+  --line:#3a2026;
+  --card:rgba(20,10,13,.78);
+  --display:'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --body:'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  color-scheme: dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;-webkit-tap-highlight-color:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;transition:opacity 1.4s ease, filter 1.4s ease}
+body.dim canvas{opacity:.2;filter:blur(1.5px)}
+body.dim.yes-mode canvas{opacity:.32}
+
+.hint{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));margin:0;text-align:center;font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);opacity:.7;transition:opacity .6s;pointer-events:none}
+body.dim .hint{opacity:0}
+
+.stage{position:fixed;inset:0;overflow-y:auto;display:flex;flex-direction:column;
+  padding-block:calc(28px + env(safe-area-inset-top,0px)) calc(28px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+.scene{margin:auto;width:100%;max-width:520px;display:grid;gap:22px;justify-items:center;text-align:center;animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.eyebrow{margin:0;font:500 11.5px/1.4 var(--mono);letter-spacing:.08em;color:var(--red)}
+h1,h2{margin:0;font-family:var(--display);font-weight:400;text-wrap:balance;line-height:1.02;letter-spacing:-.01em}
+h1{font-size:clamp(44px, 11vw, 76px)}
+h1 em,h2 em{font-style:italic;color:var(--red)}
+h2{font-size:clamp(32px, 8vw, 48px)}
+.sub{margin:0;color:var(--muted);font-size:15px;line-height:1.5;max-width:40ch}
+
+.choices{display:flex;gap:14px;align-items:center;justify-content:center;min-height:120px}
+.btn{font:700 17px/1 var(--body);border-radius:999px;padding:16px 34px;border:1.5px solid var(--red);cursor:pointer;transition:transform .35s cubic-bezier(.2,.8,.2,1.3), background .2s, color .2s, opacity .2s;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:focus-visible,.place:focus-visible,.chip:focus-visible,#copy:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.btn.yes{background:var(--red);color:#fff;box-shadow:0 0 0 0 rgba(255,45,72,.5);animation:glow 2.2s ease-in-out infinite}
+@keyframes glow{50%{box-shadow:0 0 34px 2px rgba(255,45,72,.45)}}
+.btn.yes:disabled{opacity:.35;cursor:not-allowed;animation:none}
+.btn.no{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.no.loose{position:fixed;z-index:20;transition:left .28s cubic-bezier(.2,.8,.2,1), top .28s cubic-bezier(.2,.8,.2,1);white-space:nowrap}
+
+.places{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%}
+.place{all:unset;box-sizing:border-box;cursor:pointer;text-align:left;padding:14px 14px 15px;border:1px solid var(--line);border-radius:14px;background:var(--card);display:grid;gap:5px;min-width:0;transition:border-color .2s, background .2s, transform .2s}
+.place:hover{border-color:#6a2f39;transform:translateY(-1px)}
+.place b{font:600 15.5px/1.2 var(--body)}
+.place span{font-size:12.5px;line-height:1.4;color:var(--muted)}
+.place[aria-pressed="true"]{border-color:var(--red);background:rgba(255,45,72,.14)}
+.place[aria-pressed="true"] b{color:#fff}
+
+.group{display:grid;gap:10px;justify-items:center;width:100%}
+#other{box-sizing:border-box;width:100%;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:500 15.5px/1.2 var(--body);text-align:center;outline:none;transition:border-color .2s, background .2s}
+#other::placeholder{color:var(--muted);opacity:.8}
+#other:focus{border-color:#6a2f39}
+#other.filled{border-color:var(--red);background:rgba(255,45,72,.14)}
+.days{display:grid;gap:10px;justify-items:center;width:100%}
+.label{margin:0;font:500 11.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{all:unset;cursor:pointer;padding:10px 16px;border-radius:999px;border:1px solid var(--line);font:600 14px/1 var(--body);background:var(--card)}
+.chip[aria-pressed="true"]{border-color:var(--red);background:var(--red);color:#fff}
+
+.ticket{width:100%;max-width:380px;border:1px solid var(--line);border-radius:16px;background:var(--card);text-align:left;position:relative;overflow:hidden}
+.ticket header{padding:14px 18px;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:12px;font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--red)}
+.ticket header span:last-child{color:var(--muted)}
+.ticket dl{margin:0;padding:8px 18px 14px;display:grid;grid-template-columns:auto 1fr;gap:10px 18px}
+.ticket dt{font:500 11px/1.6 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ticket dd{margin:0;font:600 16px/1.35 var(--body);min-width:0}
+.ticket::before,.ticket::after{content:"";position:absolute;top:41px;width:16px;height:16px;border-radius:50%;background:var(--bg);border:1px solid var(--line)}
+.ticket::before{left:-9px}.ticket::after{right:-9px}
+
+.small{margin:0;font-size:13px;color:var(--muted)}
+.msg{width:100%;max-width:380px;display:flex;gap:10px;align-items:flex-start;text-align:left;padding:12px 12px 12px 14px;border:1px solid var(--line);border-radius:12px;font-size:14px;line-height:1.45;background:rgba(0,0,0,.4)}
+.msg span{flex:1;min-width:0;user-select:all;-webkit-user-select:all}
+#copy{all:unset;cursor:pointer;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--red);padding:6px 4px}
+
+.float-heart{position:fixed;bottom:-30px;z-index:5;color:var(--red);pointer-events:none;animation:floatUp linear forwards}
+@keyframes floatUp{to{transform:translateY(-115vh) rotate(var(--r));opacity:0}}
+
+@media (max-width:360px){.places{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){
+  .scene{animation:none}.btn.yes{animation:none}.float-heart{display:none}
+}
+</style>
+
+<canvas id="heart" aria-hidden="true"></canvas>
+<p class="hint" id="hint">toque para pular</p>
+
+<main class="stage" id="stage">
+  <section class="scene" id="ask" hidden>
+    <h1 id="askTitle"></h1>
+    <div class="choices" id="choices">
+      <button class="btn yes" id="yes" type="button">Sim</button>
+      <button class="btn no" id="no" type="button">Não</button>
+    </div>
+  </section>
+
+  <section class="scene" id="pick" hidden>
+    <p class="eyebrow" id="pickEyebrow"></p>
+    <h2 id="pickTitle"></h2>
+    <div class="group">
+      <p class="label">Pra jantar</p>
+      <div class="places" id="places"></div>
+    </div>
+    <div class="group">
+      <p class="label">Ou um rolê</p>
+      <div class="chips" id="acts"></div>
+    </div>
+    <div class="group">
+      <label class="label" for="other">Ou escreve outra ideia</label>
+      <input id="other" type="text" maxlength="80" autocomplete="off" placeholder="Ex.: piquenique no Parque Lage">
+    </div>
+    <div class="days" id="daysWrap" hidden>
+      <p class="label">Qual dia?</p>
+      <div class="chips" id="days"></div>
+    </div>
+    <button class="btn yes" id="confirm" type="button" disabled>Fechar o date</button>
+  </section>
+
+  <section class="scene" id="done" hidden>
+    <h2>Combinado.</h2>
+    <div class="ticket">
+      <header><span>Date nº 1</span><span id="tkFrom"></span></header>
+      <dl>
+        <dt>Programa</dt><dd id="tkPlace"></dd>
+        <dt>Dia</dt><dd id="tkDay"></dd>
+        <dt>Status</dt><dd id="tkStatus"></dd>
+      </dl>
+    </div>
+    <a class="btn yes" id="wa" href="#" target="_blank" rel="noopener">Mandar a resposta no WhatsApp</a>
+    <p class="small">Se o WhatsApp não abrir, copia e manda:</p>
+    <div class="msg"><span id="msgText"></span><button id="copy" type="button">Copiar</button></div>
+  </section>
+</main>
+
+<script>
+/* ===================== EDITE AQUI ===================== */
+const CONFIG = {
+  nome: "",                  // nome dela (vazio = sem nome)
+  meuNome: "Sam",
+  whatsapp: "5521983631175", // número que recebe a resposta (DDI+DDD)
+  pergunta: "topa um <em>date</em> comigo?",
+  escolhaAviso: "resposta registrada: sim ✦",
+  escolhaTitulo: "Então quem escolhe <em>é você</em>: qual vai ser o programa?",
+  status: "Date marcado",
+  mensagem: (programa, dia) => `Topo o date, ${CONFIG.meuNome}! 😊 Programa: ${programa}, ${dia}.`,
+  frases: ["Bora sair?","Bora sair?","Vamos sair?","Let's go out?","¿Salimos?","On sort ?","Usciamo?",
+    "Gehen wir aus?","デートしよう","데이트할래?","Пойдём на свидание?","Çıkalım mı?","Zullen we uitgaan?",
+    "Ska vi gå ut?","Umówisz się ze mną?","Đi chơi nhé?","去约会吧","Πάμε έξω;","ไปเดทกันไหม"],
+  lugares: [
+    { nome: "Terra Brasilis",     detalhe: "Urca · cozinha brasileira com o Pão de Açúcar de frente" },
+    { nome: "Aprazível",          detalhe: "Santa Teresa · jantar entre as árvores com a cidade lá embaixo" },
+    { nome: "D'Heaven",           detalhe: "Barra · francês e italiano da chef Heaven Delhaye" },
+    { nome: "Domenica",           detalhe: "Botafogo · pizza artesanal num casarão antigo" },
+    { nome: "Broto Pizza",        detalhe: "Botafogo · pizzas autorais e terraço no alto" },
+    { nome: "Casa da Dona",       detalhe: "Nova Iguaçu · bistrô aconchegante, risoto e nhoque" }
+  ],
+  atividades: ["Boliche", "Cinema", "Patinação no gelo", "Kart", "Trilha", "Escape room", "Show de comédia", "Stand-up paddle ao amanhecer", "Fliperama"],
+  dias: ["Sexta", "Sábado", "Domingo", "Você escolhe"]
+};
+/* ====================================================== */
+
+const PHRASES = CONFIG.frases;
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const cv = $('heart'), ctx = cv.getContext('2d');
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const rand = (a,b) => a + Math.random()*(b-a);
+
+/* curva do coração: x = 16 sin³t, y = 13cos t − 5cos 2t − 2cos 3t − cos 4t */
+const hx = t => 16*Math.sin(t)**3;
+const hy = t => 13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t);
+const poly = Array.from({length:360}, (_,i) => { const t = i/360*Math.PI*2; return [hx(t), hy(t)]; });
+function inside(x,y){
+  let c = false;
+  for (let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const [xi,yi]=poly[i],[xj,yj]=poly[j];
+    if (((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) c=!c;
+  }
+  return c;
+}
+const color = () => `hsla(${rand(346,360)|0}, ${rand(82,100)|0}%, ${rand(46,64)|0}%, ${rand(.72,1).toFixed(2)})`;
+
+/* itens em coordenadas do coração (unidades), para redimensionar sem perder nada */
+const items = [];
+const OUTLINE = 96, FILL = 250;
+for (let i=0;i<OUTLINE;i++){
+  const t = i/OUTLINE*Math.PI*2;
+  items.push({x:hx(t)+rand(-.25,.25), y:hy(t)+rand(-.25,.25), size:rand(.62,.98), text:pick(PHRASES), c:color(), t0:i*26});
+}
+let placed = 0, guard = 0;
+while (placed < FILL && guard++ < 20000){
+  const x = rand(-15,15), y = rand(-16,11.5);
+  if (!inside(x*1.12, y*1.1 + .3)) continue;
+  items.push({x, y, size:rand(.5,.92), text:pick(PHRASES), c:color(), t0:OUTLINE*26 + 150 + placed*17});
+  placed++;
+}
+const DRAW_END = items[items.length-1].t0 + 400;
+
+let W=0,H=0,S=1,dpr=1;
+function resize(){
+  dpr = Math.min(window.devicePixelRatio||1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  S = Math.min(W*0.94/34, H*0.8/30);
+}
+addEventListener('resize', resize); resize();
+
+let start = performance.now() - (reduce ? 1e6 : 0);
+let phase = 'drawing', beatAt = null;
+
+function frame(now){
+  const el = now - start;
+  ctx.clearRect(0,0,W,H);
+  let k = 1;
+  if (beatAt !== null){
+    const b = (now - beatAt)/1000;
+    k = 1 + 0.045*Math.max(0, Math.sin(b*Math.PI*2.4))**6 * (b < 30 ? 1 : 0);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const cx = W/2, cy = H/2;
+  for (const it of items){
+    const a = Math.min(1, (el - it.t0)/260);
+    if (a <= 0) continue;
+    const fs = Math.max(7, it.size*S);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = it.c;
+    ctx.font = `700 ${fs.toFixed(1)}px Figtree, system-ui, sans-serif`;
+    ctx.fillText(it.text, cx + it.x*S*k, cy - (it.y+2.5)*S*k);
+  }
+  ctx.globalAlpha = 1;
+  if (phase === 'drawing' && el > DRAW_END + 900) showAsk();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+function skip(){ if (phase === 'drawing') start = performance.now() - DRAW_END - 900; }
+addEventListener('pointerdown', skip);
+addEventListener('keydown', skip);
+
+function show(id){
+  for (const s of ['ask','pick','done']) $(s).hidden = (s !== id);
+  $('stage').scrollTop = 0;
+}
+
+/* ---------- pedido ---------- */
+{
+  const n = CONFIG.nome.trim(), q = CONFIG.pergunta;
+  $('askTitle').innerHTML = n ? `${escapeHTML(n)}, ${q}` : q.charAt(0).toUpperCase() + q.slice(1);
+  $('pickEyebrow').textContent = CONFIG.escolhaAviso;
+  $('pickTitle').innerHTML = CONFIG.escolhaTitulo;
+  $('tkStatus').textContent = CONFIG.status;
+}
+function showAsk(){
+  phase = 'ask';
+  document.body.classList.add('dim');
+  show('ask');
+}
+
+const NO_TEXT = ["Não","Tem certeza?","Pensa melhor","Errou o botão","Última chance","O Sim tá ali ó","Desiste 😅"];
+let tries = 0;
+const no = $('no'), yes = $('yes');
+function escape(e){
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  tries++;
+  if (!no.classList.contains('loose')){
+    const r = no.getBoundingClientRect();
+    document.body.appendChild(no);
+    no.classList.add('loose');
+    no.style.left = r.left+'px'; no.style.top = r.top+'px';
+    no.offsetWidth;
+  }
+  no.textContent = NO_TEXT[Math.min(tries, NO_TEXT.length-1)];
+  const bw = no.offsetWidth, bh = no.offsetHeight, m = 16;
+  const yr = yes.getBoundingClientRect();
+  let x, y, n = 0;
+  do {
+    x = rand(m, Math.max(m, W - bw - m));
+    y = rand(m + 40, Math.max(m + 40, H - bh - m - 40));
+    n++;
+  } while (n < 40 && x < yr.right + 20 && x + bw > yr.left - 20 && y < yr.bottom + 20 && y + bh > yr.top - 20);
+  no.style.left = x+'px'; no.style.top = y+'px';
+  yes.style.transform = `scale(${Math.min(1 + tries*0.14, 2)})`;
+}
+no.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') escape(e); });
+no.addEventListener('touchstart', escape, {passive:false});
+no.addEventListener('pointerdown', escape);
+no.addEventListener('click', escape);
+
+yes.addEventListener('click', () => {
+  phase = 'yes';
+  no.remove();
+  document.body.classList.add('yes-mode');
+  beatAt = performance.now();
+  burst();
+  show('pick');
+});
+
+function burst(){
+  if (reduce) return;
+  for (let i=0;i<28;i++){
+    const h = document.createElement('span');
+    h.className = 'float-heart';
+    h.textContent = '♥';
+    h.style.left = rand(0,100)+'vw';
+    h.style.fontSize = rand(14,34)+'px';
+    h.style.setProperty('--r', rand(-40,40)+'deg');
+    h.style.animationDuration = rand(3.2,6)+'s';
+    h.style.animationDelay = rand(0,1.4)+'s';
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 8000);
+  }
+}
+
+/* ---------- escolha do lugar ---------- */
+let chosenPlace = null, chosenDay = null;
+const placesEl = $('places');
+CONFIG.lugares.forEach((l, i) => {
+  const b = document.createElement('button');
+  b.className = 'place'; b.type = 'button'; b.id = 'place-'+i;
+  b.setAttribute('aria-pressed','false');
+  b.innerHTML = `<b>${escapeHTML(l.nome)}</b><span>${escapeHTML(l.detalhe||'')}</span>`;
+  b.addEventListener('click', () => choose(l.nome, b));
+  placesEl.appendChild(b);
+});
+const actsEl = $('acts');
+CONFIG.atividades.forEach((a, i) => {
+  const c = document.createElement('button');
+  c.className = 'chip act'; c.type = 'button'; c.id = 'act-'+i; c.textContent = a;
+  c.setAttribute('aria-pressed','false');
+  c.addEventListener('click', () => choose(a, c));
+  actsEl.appendChild(c);
+});
+const other = $('other');
+function choose(value, el){
+  chosenPlace = value;
+  document.querySelectorAll('.place, .chip.act').forEach(p => p.setAttribute('aria-pressed', String(p === el)));
+  if (el) { other.value = ''; other.classList.remove('filled'); }
+  if (value) $('daysWrap').hidden = false;
+  updateConfirm();
+}
+other.addEventListener('input', () => {
+  const v = other.value.trim();
+  other.classList.toggle('filled', !!v);
+  choose(v || null, null);
+});
+const daysEl = $('days');
+CONFIG.dias.forEach((d, i) => {
+  const c = document.createElement('button');
+  c.className = 'chip'; c.type = 'button'; c.id = 'day-'+i; c.textContent = d;
+  c.setAttribute('aria-pressed','false');
+  c.addEventListener('click', () => {
+    chosenDay = d;
+    daysEl.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === c)));
+    updateConfirm();
+  });
+  daysEl.appendChild(c);
+});
+function updateConfirm(){ $('confirm').disabled = !(chosenPlace && chosenDay); }
+
+$('confirm').addEventListener('click', () => {
+  const dayTxt = chosenDay === 'Você escolhe' ? 'o dia você escolhe' : chosenDay;
+  $('tkPlace').textContent = chosenPlace;
+  $('tkDay').textContent = chosenDay === 'Você escolhe' ? 'Você escolhe' : chosenDay;
+  $('tkFrom').textContent = 'convite de ' + CONFIG.meuNome;
+  const msg = CONFIG.mensagem(chosenPlace, dayTxt);
+  $('msgText').textContent = msg;
+  const num = CONFIG.whatsapp.replace(/\D/g,'');
+  $('wa').href = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  burst();
+  show('done');
+});
+
+$('copy').addEventListener('click', () => {
+  const t = $('msgText').textContent;
+  const done = () => { $('copy').textContent = 'Copiado'; setTimeout(() => $('copy').textContent = 'Copiar', 1800); };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($('msgText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+  try { navigator.clipboard.writeText(t).then(done, fallback); } catch(e){ fallback(); }
+});
+
+function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+
+</html>
